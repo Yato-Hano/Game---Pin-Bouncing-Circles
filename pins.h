@@ -98,7 +98,7 @@ private:
 class Timer : public sf::Drawable
 {
 public:
-    Timer(float s);
+    Timer(float s, sf::Text& gs);
     void restart() { clock.restart(); }
     void set_text_formatted(const std::string& message);
     void stop() { clock.stop(); }
@@ -107,6 +107,7 @@ public:
 private:
     sf::Clock clock;
     float max_seconds;
+    sf::Text& game_status;
     sf::Text text;
     void draw(sf::RenderTarget& target, sf::RenderStates states) const override
     {
@@ -117,13 +118,14 @@ private:
 class Pins_Pocket : public sf::Drawable
 {
 public:
-    Pins_Pocket(unsigned pins_max, Timer& t);
+    Pins_Pocket(unsigned pins_max, sf::Text& t, Timer&);
     bool empty() const { return pins_left ? false : true; }
     void remove_one();
     void hit_remove_one(sf::Vector2f hit_position);
     void setPosition(sf::Vector2f p) { pin.setPosition(p); }
 private:
     unsigned pins_left;
+    sf::Text& game_status;
     sf::Text text;
     sf::Texture pin_texture;
     sf::Sprite pin;
@@ -141,13 +143,14 @@ private:
 class Move_Handler
 {
 public:
-    Move_Handler(sf::Vector2u b, std::vector<std::unique_ptr<Bouncing_Object>>& v, Pins_Pocket& p, Timer& timer);
+    Move_Handler(sf::Vector2u b, sf::Text& gs, std::vector<std::unique_ptr<Bouncing_Object>>& v, Pins_Pocket& p, Timer& timer);
     void operator()(const sf::Event::MouseMoved& m);
     bool is_any_mooving(); // except bombs
     void operator()(const sf::Event::MouseButtonPressed& m); 
     void operator()(); //move and bounce. call every frame
 private:
     sf::Vector2u bounds;
+    sf::Text& game_status;
     std::vector<std::unique_ptr<Bouncing_Object>>& shapes;
     Pins_Pocket& pins;
     Timer& timer;
@@ -165,5 +168,6 @@ private:
     Pins_Pocket pins;
     Move_Handler handler;
     sf::Texture bomb_texture;
+    sf::Text game_status;
 };
 //--------------------------------------------------------------------------------------------

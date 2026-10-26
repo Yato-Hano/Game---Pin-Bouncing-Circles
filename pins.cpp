@@ -68,8 +68,9 @@ void move(Bouncing_Object& object, const sf::Vector2u& bounds)
 }
 //--------------------------------------------------------------------------------------------
 
-Pins_Pocket::Pins_Pocket(unsigned pins_max, Timer& t) :
+Pins_Pocket::Pins_Pocket(unsigned pins_max, sf::Text& gs,Timer& t) :
     pins_left{ pins_max },
+    game_status{gs},
     text{ font,std::format("{} pins", pins_left) },
     pin_texture{ "pin.PNG" },
     pin{ pin_texture },
@@ -86,7 +87,7 @@ void Pins_Pocket::remove_one()
     if (empty())
     {
         timer.stop();
-        timer.set_text_formatted("You Loose");
+        game_status.setString("You Loose");
         text.setString("Empty.");
         return;
     }
@@ -109,8 +110,9 @@ bool circles_collide(const Bouncing_Object& a, const Bouncing_Object& b)
 }
 
 //--------------------------------------------
-Timer::Timer(float s) :
+Timer::Timer(float s, sf::Text& gs) :
     max_seconds{ s },
+    game_status(gs),
     text{ font,"timer-here" }
 {
     text.setPosition({ 0, 0 });
@@ -124,14 +126,19 @@ void Timer::set_text_formatted(const std::string& message)
 void Timer::operator()()
 {
     float seconds_left{ max_seconds - clock.getElapsedTime().asSeconds() };
-    if (seconds_left <= 0) {
-        stop(); set_text_formatted("You Loose.");
+
+    if (seconds_left <= 0) 
+    {
+        stop();
+        text.setString("Time Is Over.");
+        game_status.setString("You Loose.");
     }
-    else set_text_formatted(""); // continue playing
+    else
+    set_text_formatted(""); // print time
 }
 //--------------------------------------------
-Move_Handler::Move_Handler(sf::Vector2u b, std::vector<std::unique_ptr<Bouncing_Object>>& v, Pins_Pocket& p, Timer& timer)
-    :bounds{ b }, shapes{ v }, pins{ p }, timer{ timer }
+Move_Handler::Move_Handler(sf::Vector2u b, sf::Text& gs, std::vector<std::unique_ptr<Bouncing_Object>>& v, Pins_Pocket& p, Timer& timer)
+    :bounds{ b }, game_status{ gs }, shapes{ v }, pins{ p }, timer{ timer }
 {
 }
 bool Move_Handler::is_any_mooving() {
@@ -159,13 +166,13 @@ void Move_Handler::operator()(const sf::Event::MouseButtonPressed& m)
                 if (c->object_type() == Object_Type::Bomb)
                 {
                     timer.stop();
-                    timer.set_text_formatted("You Loose. Boom.");
+                    game_status.setString("You Loose. Boom.");
                 }
                 else
                     if (!is_any_mooving()) // is every circle clicked
                     {
                         timer.stop();
-                        timer.set_text_formatted("Win");
+                        game_status.setString("Win");
                     }
             }
 
@@ -195,12 +202,16 @@ void Move_Handler::operator()()
 //--------------------------------------------
 Window::Window()
     :sf::RenderWindow{ sf::VideoMode{ { 800, 800 } }, "SFML Hello",sf::Style::Close ,sf::State::Windowed,sf::ContextSettings{.antiAliasingLevel = 8 } }, 
-    timer{10.f},
-    pins{max_circles+5,timer},
-    handler{ getSize(), circles,pins,timer},
-    bomb_texture{"bomb100.png"}
+    timer{10.f,game_status },
+    pins{max_circles+5,game_status,timer},
+    handler{ getSize(),game_status, circles,pins,timer},
+    bomb_texture{"bomb100.png"},
+    game_status{font,"Not Over"}
 {
     setFramerateLimit(60);
+
+    game_status.setFillColor(sf::Color::White);
+    game_status.setPosition({300,0});
 
     circles.reserve(max_circles);
     for (size_t i = 0; i < max_circles; i++)
@@ -250,8 +261,10 @@ void Window::show()
         {
             draw(*c);
         }
-        draw(pins);
         draw(timer);
+        draw(game_status);
+        draw(pins);
+
         display();
     }
 }
