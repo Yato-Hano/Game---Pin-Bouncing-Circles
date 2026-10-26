@@ -11,11 +11,14 @@ Requirements:
 - mingw32-make on MSYS2
   
 Build (Windows, MSYS2 UCRT64):
-- pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-make mingw-w64-ucrt-x86_64-sfml
-mingw32-make
+- `pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-make mingw-w64-ucrt-x86_64-sfml
+mingw32-make`
+- `cd` to the game folder (with bomb100.png, pins.cpp etc.)
+- `mingw32-make clean` (if error on building)
+- `mingw32-make`
 
-Run (from MSYS2 UCRT64):
-- ./pins.exe
+Run (from MSYS2 UCRT64 when current directory is the game folder(with pins.exe, bomb100.png etc.)):
+- `./pins.exe`
   
 Development environment:
 - SFML 3.1.0
