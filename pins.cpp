@@ -84,6 +84,7 @@ Pins_Pocket::Pins_Pocket(unsigned pins_max, sf::Text& gs,Timer& t) :
 }
 void Pins_Pocket::remove_one()
 {
+    --pins_left;
     if (empty())
     {
         timer.stop();
@@ -91,7 +92,6 @@ void Pins_Pocket::remove_one()
         text.setString("Empty.");
         return;
     }
-    --pins_left;
     text.setString(std::format("{} pins", pins_left));
 }
 void Pins_Pocket::hit_remove_one(sf::Vector2f hit_position)
