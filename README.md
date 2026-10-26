@@ -13,7 +13,7 @@ Requirements:
 Build (Windows, MSYS2 UCRT64):
 - `pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-make mingw-w64-ucrt-x86_64-sfml
 mingw32-make`
-- `cd` to the game folder (with bomb100.png, pins.cpp etc.)
+- `cd` to the game folder (pins.h and pins.cpp)
 - `mingw32-make clean` (if error on building)
 - `mingw32-make`
 
