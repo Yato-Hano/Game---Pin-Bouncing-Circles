@@ -1,9 +1,19 @@
 #pragma once
-#include <SFML/Graphics.hpp>
-import std;
+
 /*
-   Pin moving bouncing circles with mouse clicks but beware of bombs, the timer, and finite pins. 
+   Pin moving bouncing circles with mouse clicks, 
+   but beware of bombs, the timer, and finite pins.
 */
+
+#include <SFML/Graphics.hpp>
+#include <format>
+#include <print>
+#include <fstream>
+#include <iostream>
+#include <random>
+#include <string>
+#include <vector>
+
 inline int rand_int(int min, int max)
 {
     static std::default_random_engine ran{ unsigned(time(0)) };
@@ -137,7 +147,7 @@ public:
     void operator()(const sf::Event::MouseButtonPressed& m); 
     void operator()(); //move and bounce. call every frame
 private:
-    sf::Vector2u& bounds;
+    sf::Vector2u bounds;
     std::vector<std::unique_ptr<Bouncing_Object>>& shapes;
     Pins_Pocket& pins;
     Timer& timer;
@@ -150,7 +160,7 @@ public:
     void show();
 private:
     Timer timer;
-    size_t max_circles{ 13 };
+    unsigned max_circles{ 13 };
     std::vector<std::unique_ptr<Bouncing_Object>> circles;
     Pins_Pocket pins;
     Move_Handler handler;

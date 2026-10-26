@@ -1,6 +1,5 @@
 #include <pins.h>
 
-
 //--------------------------------------------
 Bouncing_Bomb::Bouncing_Bomb(const sf::Texture& t)
     : sprite{ t }
@@ -55,8 +54,8 @@ void move(Bouncing_Object& object, const sf::Vector2u& bounds)
     object.save_position();
     object.move_by(object.velocity);
 
-    const auto& radius{ object.get_radius() };
-    const auto& pos{ object.get_position() };
+    float radius{ object.get_radius() };
+    sf::Vector2f pos{ object.get_position() };
 
     if ((pos.x - radius) < 0 || bounds.x < (pos.x + radius)) {
         object.x_inversion();
@@ -133,7 +132,8 @@ void Timer::operator()()
 //--------------------------------------------
 Move_Handler::Move_Handler(sf::Vector2u b, std::vector<std::unique_ptr<Bouncing_Object>>& v, Pins_Pocket& p, Timer& timer)
     :bounds{ b }, shapes{ v }, pins{ p }, timer{ timer }
-{}
+{
+}
 bool Move_Handler::is_any_mooving() {
     for (const auto& c : shapes)
     {
@@ -196,7 +196,7 @@ void Move_Handler::operator()()
 Window::Window()
     :sf::RenderWindow{ sf::VideoMode{ { 800, 800 } }, "SFML Hello",sf::Style::Close ,sf::State::Windowed,sf::ContextSettings{.antiAliasingLevel = 8 } }, 
     timer{10.f},
-    pins{ max_circles +5,timer},
+    pins{max_circles+5,timer},
     handler{ getSize(), circles,pins,timer},
     bomb_texture{"bomb100.png"}
 {
@@ -265,11 +265,15 @@ try
 }
 catch(const std::exception& e)
 {
-    std::println("Error {}.",e.what());
+    std::ofstream ofs{"error_log.txt",std::ios::app};
+    ofs << "Error: " << e.what() <<'.' << std::endl;
+    std::println("Error: {}.", e.what());
     std::cin.get();
 }
 catch(...)
 {
+    std::ofstream ofs{ "error_log.txt",std::ios::app };
+    ofs << "Some error." << std::endl;
     std::println("Some error.");
     std::cin.get();
 }
