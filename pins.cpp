@@ -2,8 +2,14 @@
 
 
 //--------------------------------------------
+Bouncing_Bomb::Bouncing_Bomb(const sf::Texture& t)
+    : sprite{ t }
+{
+    sprite.setOrigin({ 50,66 });
+    save_position();
+}
+
 Bouncing_Circle::Bouncing_Circle()
-    :velocity{ 1.5f, 1.0f }
 {
     auto radius{ rand_int(10, 70) };
     circle.setRadius(radius);
@@ -12,10 +18,10 @@ Bouncing_Circle::Bouncing_Circle()
     circle.setOutlineThickness(-3);
     circle.setOutlineColor(sf::Color::Cyan);
 
-    circle.setPosition(sf::Vector2f(rand_int(100, 700), rand_int(100, 700)));
+    save_position();
 }
 
-void bounce(Bouncing_Circle& a, Bouncing_Circle& b)
+void bounce(Bouncing_Object& a, Bouncing_Object& b)
 {
     if (&a == &b) return;
 
@@ -44,20 +50,21 @@ void bounce(Bouncing_Circle& a, Bouncing_Circle& b)
         }
     }
 }
-void move(Bouncing_Circle& circle, const sf::Vector2u& bounds) {
-    circle.saved_position = circle.get_position();
-    circle.move_by(circle.velocity);
+void move(Bouncing_Object& object, const sf::Vector2u& bounds)
+{
+    object.save_position();
+    object.move_by(object.velocity);
 
-    const auto& radius{ circle.get_radius() };
-    const auto& pos{ circle.get_position() };
+    const auto& radius{ object.get_radius() };
+    const auto& pos{ object.get_position() };
 
     if ((pos.x - radius) < 0 || bounds.x < (pos.x + radius)) {
-       circle.velocity.x = -circle.velocity.x;
-       circle.restore_position();
+        object.x_inversion();
+        object.restore_position();
     }
     if ((pos.y - radius < 0) || (bounds.y < pos.y + radius)) {
-       circle.velocity.y = -circle.velocity.y;
-       circle.restore_position();
+        object.y_inversion();
+        object.restore_position();
     }
 }
 //--------------------------------------------------------------------------------------------
@@ -96,7 +103,7 @@ void Pins_Pocket::hit_remove_one(sf::Vector2f hit_position)
 }
 //--------------------------------------------
 
-bool circles_collide(const Bouncing_Circle& a, const Bouncing_Circle& b)
+bool circles_collide(const Bouncing_Object& a, const Bouncing_Object& b)
 {
     if (&a == &b) return false;
     return (a.get_position() - b.get_position()).length() <= a.get_radius() + b.get_radius();
@@ -115,14 +122,22 @@ void Timer::set_text_formatted(const std::string& message)
     float seconds_left{ max_seconds - clock.getElapsedTime().asSeconds() };
     text.setString(std::format("{:.3}s {}", seconds_left < 0 ? 0 : seconds_left, message));
 }
+void Timer::operator()()
+{
+    float seconds_left{ max_seconds - clock.getElapsedTime().asSeconds() };
+    if (seconds_left <= 0) {
+        stop(); set_text_formatted("You Loose.");
+    }
+    else set_text_formatted(""); // continue playing
+}
 //--------------------------------------------
-Move_Handler::Move_Handler(sf::RenderWindow& w, std::vector<std::unique_ptr<Bouncing_Circle>>& v, Pins_Pocket& p, Timer& timer)
-    :window{ w }, shapes{ v }, pins{ p }, timer{ timer }
+Move_Handler::Move_Handler(sf::Vector2u b, std::vector<std::unique_ptr<Bouncing_Object>>& v, Pins_Pocket& p, Timer& timer)
+    :bounds{ b }, shapes{ v }, pins{ p }, timer{ timer }
 {}
 bool Move_Handler::is_any_mooving() {
     for (const auto& c : shapes)
     {
-        if (c->is_this_circle() && c->is_moving()) // allow moving bombs
+        if (c->object_type() == Object_Type::Circle && c->is_moving()) // allow moving bombs
         {
             return true;
         }
@@ -131,6 +146,8 @@ bool Move_Handler::is_any_mooving() {
 }
 void Move_Handler::operator()(const sf::Event::MouseButtonPressed& m)
 {
+    if (!timer.does_ticks()) return;
+
     for (auto& c : shapes)
     {
         sf::Vector2f pos = sf::Vector2f(m.position);
@@ -139,7 +156,7 @@ void Move_Handler::operator()(const sf::Event::MouseButtonPressed& m)
             if (c->is_moving())
             {
                 c->stop(); // pined
-                if (!c->is_this_circle())
+                if (c->object_type() == Object_Type::Bomb)
                 {
                     timer.stop();
                     timer.set_text_formatted("You Loose. Boom.");
@@ -164,8 +181,7 @@ void Move_Handler::operator()(const sf::Event::MouseMoved& m)
 }
 void Move_Handler::operator()()
 {
-    auto bounds = window.getSize();
-    for (std::unique_ptr<Bouncing_Circle>& c : shapes)
+    for (auto& c : shapes)
         move(*c, bounds);
 
     for (size_t i{ 0 }; i < shapes.size(); i++)
@@ -178,10 +194,10 @@ void Move_Handler::operator()()
 }
 //--------------------------------------------
 Window::Window()
-    :sf::RenderWindow{ sf::VideoMode{ { 800, 800 } }, "SFML Hello",sf::Style::Titlebar ,sf::State::Windowed,sf::ContextSettings{.antiAliasingLevel = 8 } }, 
+    :sf::RenderWindow{ sf::VideoMode{ { 800, 800 } }, "SFML Hello",sf::Style::Close ,sf::State::Windowed,sf::ContextSettings{.antiAliasingLevel = 8 } }, 
     timer{10.f},
     pins{ max_circles +5,timer},
-    handler{ *this, circles,pins,timer},
+    handler{ getSize(), circles,pins,timer},
     bomb_texture{"bomb100.png"}
 {
     setFramerateLimit(60);
@@ -193,7 +209,10 @@ Window::Window()
             circles.push_back(std::make_unique<Bouncing_Bomb>(bomb_texture));
         else
             circles.push_back(std::make_unique<Bouncing_Circle>());
+       
+        circles.back()->set_position(sf::Vector2f(rand_int(100, 700), rand_int(100, 700)));
 
+        // a little bit to randomise movement speed and direction
         float sign_x = (i % 2)? -1.f : 1.f;
         float sign_y = (i % 2) ? -1.f : 1.f;
         float x = rand_int(1, 7)/10.f;
@@ -221,19 +240,16 @@ void Window::show()
 
     while (isOpen())
     {
-        if (timer.does_ticks())
-        {
-            timer();
-            handleEvents(handler);
-        }
-       
-        handler();
+        handleEvents([this](const sf::Event::Closed) { close(); }, handler);
+        
+        timer(); 
+        handler(); 
+      
         clear(sf::Color{ 18, 20, 32 });
         for (const auto& c : circles) 
         {
             draw(*c);
         }
-        
         draw(pins);
         draw(timer);
         display();

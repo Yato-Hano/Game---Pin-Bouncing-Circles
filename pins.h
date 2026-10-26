@@ -9,33 +9,51 @@ inline int rand_int(int min, int max)
     static std::default_random_engine ran{ unsigned(time(0)) };
     return std::uniform_int_distribution<>{min, max}(ran);
 }
-
 sf::Font font{ "OpenSans.ttf" };
+//--------------------------------------------------------------------------------------------
+enum class  Object_Type { Circle, Bomb };
 
-class Bouncing_Circle : public sf::Drawable
+class Bouncing_Object : public sf::Drawable
 {
 public:
-    Bouncing_Circle();
+    Bouncing_Object() = default;
     const sf::Vector2f& get_velocity() const { return velocity; }
     bool is_moving() const { return velocity.x != 0 || velocity.y != 0; }
 
-    virtual bool is_this_circle() const { return true; }
-    virtual float get_radius() const { return circle.getRadius(); }
-    virtual sf::Vector2f get_position() const { return circle.getPosition(); }
+    virtual Object_Type object_type() const = 0;
+    virtual float get_radius() const = 0;
+    virtual sf::Vector2f get_position() const = 0;
     virtual void stop() { velocity = {}; }
-    virtual void restore_position() { circle.setPosition(saved_position); };
-    virtual void set_position(const sf::Vector2f& p) { circle.setPosition(p); }
-    virtual void move_by(const sf::Vector2f& offset) { circle.move(offset); }
+    virtual void restore_position() = 0;
+    virtual void set_position(const sf::Vector2f& p) = 0;
 
+    void save_position() { saved_position = get_position(); }
     void x_inversion() { velocity.x = -velocity.x; }
     void y_inversion() { velocity.y = -velocity.y; }
     void add_velocity(sf::Vector2f dv) { velocity += dv; }
 
-    friend void move(Bouncing_Circle&, const sf::Vector2u& bounds);
-    friend void bounce(Bouncing_Circle&, Bouncing_Circle&);
+    friend void move(Bouncing_Object&, const sf::Vector2u& bounds); // use this to move an object
+    friend void bounce(Bouncing_Object&, Bouncing_Object&);
 protected:
+    virtual void move_by(const sf::Vector2f& offset) = 0;
     sf::Vector2f saved_position;
-    sf::Vector2f velocity;
+private:
+    sf::Vector2f velocity{ 1.5f, 1.0f };
+};
+//--------------------------------------------------------------------------------------------
+class Bouncing_Circle : public Bouncing_Object
+{
+public:
+    Bouncing_Circle();
+
+    Object_Type object_type() const override {   return Object_Type::Circle;   }
+    float get_radius() const override { return circle.getRadius(); }
+    sf::Vector2f get_position() const override { return circle.getPosition(); }
+
+    void restore_position() override { circle.setPosition(saved_position); };
+    void set_position(const sf::Vector2f& p) override { circle.setPosition(p); }
+protected:
+    void move_by(const sf::Vector2f& offset) override {circle.move(offset); }
 private:
     sf::CircleShape circle;
     void draw(sf::RenderTarget& target, sf::RenderStates states) const override
@@ -43,26 +61,22 @@ private:
         target.draw(circle, states);
     }
 };
-
-
+//--------------------------------------------------------------------------------------------
 // origin and radius hardcoded for the exact PNG
-class Bouncing_Bomb : public Bouncing_Circle
+class Bouncing_Bomb : public Bouncing_Object
 {
 public:
-    Bouncing_Bomb(const sf::Texture& t)
-        : sprite{ t }
-    {
-        sprite.setOrigin({ 50,66 });
-    }
+    Bouncing_Bomb(const sf::Texture& t);
 
-    bool is_this_circle() const override { return false; }
+    Object_Type object_type() const override { return Object_Type::Bomb; }
     float get_radius() const override { return 33; }
     sf::Vector2f get_position() const override { return sprite.getPosition(); }
-    void stop() override { Bouncing_Circle::stop(); sprite.setColor(sf::Color::Red); }
+
+    void stop() override { Bouncing_Object::stop(); sprite.setColor(sf::Color::Red); }
     void restore_position() override { sprite.setPosition(saved_position); };
     void set_position(const sf::Vector2f& p) override { sprite.setPosition(p); }
-    void move_by(const sf::Vector2f& xy) override { sprite.move(xy); }
-
+protected:
+    void move_by(const sf::Vector2f& xy) override {  sprite.move(xy); }
 private:
     sf::Sprite sprite;
     void draw(sf::RenderTarget& target, sf::RenderStates states) const override
@@ -70,9 +84,17 @@ private:
         target.draw(sprite, states);
     }
 };
-
+//--------------------------------------------------------------------------------------------
 class Timer : public sf::Drawable
 {
+public:
+    Timer(float s);
+    void restart() { clock.restart(); }
+    void set_text_formatted(const std::string& message);
+    void stop() { clock.stop(); }
+    bool does_ticks() { return clock.isRunning(); }
+    void operator()(); // tick the timer
+private:
     sf::Clock clock;
     float max_seconds;
     sf::Text text;
@@ -80,23 +102,8 @@ class Timer : public sf::Drawable
     {
         target.draw(text, states);
     }
-public:
-    Timer(float s);
-    void restart() { clock.restart(); }
-    void set_text_formatted(const std::string& message);
-    void stop() { clock.stop(); }
-    bool does_ticks() { return clock.isRunning(); }
-    void operator()()
-    {
-        float seconds_left{ max_seconds - clock.getElapsedTime().asSeconds() };
-        if (seconds_left <= 0) {
-            stop(); set_text_formatted("You Loose.");
-        }
-        else set_text_formatted(""); // continue playing
-    }
 };
 //--------------------------------------------------------------------------------------------
-
 class Pins_Pocket : public sf::Drawable
 {
 public:
@@ -120,21 +127,22 @@ private:
         target.draw(pin, states);
     }
 };
-
+//--------------------------------------------------------------------------------------------
 class Move_Handler
 {
-    sf::RenderWindow& window;
-    std::vector<std::unique_ptr<Bouncing_Circle>>& shapes;
-    Pins_Pocket& pins;
-    Timer& timer;
 public:
-    Move_Handler(sf::RenderWindow& w, std::vector<std::unique_ptr<Bouncing_Circle>>& v, Pins_Pocket& p, Timer& timer);
+    Move_Handler(sf::Vector2u b, std::vector<std::unique_ptr<Bouncing_Object>>& v, Pins_Pocket& p, Timer& timer);
     void operator()(const sf::Event::MouseMoved& m);
     bool is_any_mooving(); // except bombs
     void operator()(const sf::Event::MouseButtonPressed& m); 
-    void operator()(); //move andbounce. call every frame
+    void operator()(); //move and bounce. call every frame
+private:
+    sf::Vector2u& bounds;
+    std::vector<std::unique_ptr<Bouncing_Object>>& shapes;
+    Pins_Pocket& pins;
+    Timer& timer;
 };
-
+//--------------------------------------------------------------------------------------------
 class Window :public sf::RenderWindow
 {
 public:
@@ -143,8 +151,9 @@ public:
 private:
     Timer timer;
     size_t max_circles{ 13 };
-    std::vector<std::unique_ptr<Bouncing_Circle>> circles;
+    std::vector<std::unique_ptr<Bouncing_Object>> circles;
     Pins_Pocket pins;
     Move_Handler handler;
     sf::Texture bomb_texture;
 };
+//--------------------------------------------------------------------------------------------
