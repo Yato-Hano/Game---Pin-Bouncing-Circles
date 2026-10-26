@@ -5,6 +5,18 @@ Art Autors:
 - bomb100.png truezipp from opengameart
 - pin.png unknown
   
+Requirements:
+- g++ with C++23 support (tested with GCC 16.2.0 from MSYS2 UCRT64)
+- SFML 3.1.0
+- GNU make (`mingw32-make` on MSYS2)
+  
+Build (Windows, MSYS2 UCRT64):
+- pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-make mingw-w64-ucrt-x86_64-sfml
+mingw32-make
+
+Run (from MSYS2 UCRT64):
+- ./pins.exe
+  
 Development environment:
 - SFML 3.1.0
 - Visual Studio 2026
