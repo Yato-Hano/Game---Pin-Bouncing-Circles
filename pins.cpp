@@ -92,11 +92,21 @@ void Pins_Pocket::remove_one()
         text.setString("Empty.");
         return;
     }
-    text.setString(std::format("{} pins", pins_left));
+    text.setString(std::format("{} pins", pins_left)); 
 }
 void Pins_Pocket::hit_remove_one(sf::Vector2f hit_position)
 {
-    remove_one();
+    if(pins_left == 1) // win. last pin hit last circle
+    {
+        --pins_left; // == 0. need this for external empty() check
+        timer.stop();
+        text.setString("Empty.");
+    }
+    else
+    {
+        remove_one();
+    }
+
     pins_pinned.emplace_back(pin);
     pins_pinned.back().setPosition(hit_position);
     pins_pinned.back().scale({ 0.5,0.5 });
@@ -160,23 +170,42 @@ void Move_Handler::operator()(const sf::Event::MouseButtonPressed& m)
         sf::Vector2f pos = sf::Vector2f(m.position);
         if ((pos - c->get_position()).length() <= c->get_radius()) // is circle clicked
         {
+            pins.hit_remove_one(pos); // pin the circle
+
             if (c->is_moving())
             {
                 c->stop(); // pined
-                if (c->object_type() == Object_Type::Bomb)
+
+                switch (c->object_type())
                 {
+                case Object_Type::Bomb:
                     timer.stop();
                     game_status.setString("You Loose. Boom.");
-                }
-                else
-                    if (!is_any_mooving()) // is every circle clicked
+                    break;
+                case Object_Type::Circle:
+                    if (!is_any_mooving())// is every circle clicked
                     {
                         timer.stop();
                         game_status.setString("Win");
+                        return;
                     }
-            }
+                    if (pins.empty())
+                    {
+                        game_status.setString("You Loose.");
+                    }
+                    break;
+                default:
+                    break;
+                }
+            } 
+            else 
+                if (pins.empty())
+                {
+                    game_status.setString("You Loose.");
+                }
 
-            pins.hit_remove_one(pos); // pin the circle
+            
+
             return;
         }
     }

@@ -120,8 +120,8 @@ class Pins_Pocket : public sf::Drawable
 public:
     Pins_Pocket(unsigned pins_max, sf::Text& t, Timer&);
     bool empty() const { return pins_left ? false : true; }
-    void remove_one();
-    void hit_remove_one(sf::Vector2f hit_position);
+    void remove_one(); // prints number of pins left as well
+    void hit_remove_one(sf::Vector2f hit_position); 
     void setPosition(sf::Vector2f p) { pin.setPosition(p); }
 private:
     unsigned pins_left;
