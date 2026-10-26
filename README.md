@@ -8,7 +8,7 @@ Art Autors:
 Requirements:
 - g++ with C++23 support (tested with GCC 16.2.0 from MSYS2 UCRT64)
 - SFML 3.1.0
-- GNU make (`mingw32-make` on MSYS2)
+- GNU make (mingw32-make on MSYS2)
   
 Build (Windows, MSYS2 UCRT64):
 - pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-make mingw-w64-ucrt-x86_64-sfml
