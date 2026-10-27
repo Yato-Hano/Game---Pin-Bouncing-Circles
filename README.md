@@ -1,5 +1,6 @@
 # Game---Pin-Bouncing-Circles
 Pin moving bouncing circles with mouse clicks but beware of bombs, the timer, and finite pins. 
+<img width="802" height="838" alt="w" src="https://github.com/user-attachments/assets/940966f0-77c4-4731-aa4a-b3ddea059e2c" />
 
 Art Autors:
 - bomb100.png truezipp from opengameart
